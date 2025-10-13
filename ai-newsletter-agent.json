@@ -1,0 +1,314 @@
+{
+  "name": "ai-newsletter-agent",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -304,
+        -64
+      ],
+      "id": "9d1c1abd-dfd9-4d76-a22b-dbed37193e6f",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "82a70448-5c34-4a9f-9d74-a8b7aec83807",
+              "name": "rss",
+              "value": "[\n\"https://cointelegraph.com/rss\",\n\"https://news.bitcoin.com/feed/\",\n\"https://cryptoslate.com/feed/\",\n\"https://coindesk.com/arc/outboundfeeds/rss/\",\n\"https://theblock.co/rss\"\n]",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -96,
+        -64
+      ],
+      "id": "0286ddc7-38d7-4ffa-bbf7-2d480735232b",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "rss",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        112,
+        -64
+      ],
+      "id": "569aed23-ced3-445a-8b81-41e2095e7e49",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        320,
+        -64
+      ],
+      "id": "7ecbc6d4-7d55-45bc-ab86-fcf4510b1723",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.rss }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        528,
+        32
+      ],
+      "id": "05380804-5db4-4b1c-a9a0-e34fcbca21ae",
+      "name": "RSS Read1",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        656,
+        -80
+      ],
+      "id": "a5b7f929-b8bb-44ca-9ce8-edc6398f836b",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        800,
+        112
+      ],
+      "id": "6ac3ffe5-9fbc-4ff9-8740-afd98c4f4462",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "MsTVeQRAlQszHmJJ",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "markdownToHtml",
+        "markdown": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.markdown",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        -80
+      ],
+      "id": "797f5bd9-fe38-4f26-8fd0-bb6d2317e749",
+      "name": "Markdown"
+    },
+    {
+      "parameters": {
+        "sendTo": "jeminjoachim@gmail.com",
+        "subject": "=Daily Crypto Digest",
+        "message": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1424,
+        -80
+      ],
+      "id": "67ec9431-55bb-4220-942b-003bb6a9359c",
+      "name": "Send a message",
+      "webhookId": "c3ac22c8-2f15-4cc2-9d9d-5f636c80e5b4",
+      "executeOnce": false,
+      "alwaysOutputData": false,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DfMPKFXUhhzRBeJT",
+          "name": "Gmail account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Quick Operator Guide\n\n**1. Adjust schedule**\n-> Default send time is 07:00. Edit the Schedule Trigger node to your preferred time.\n\n**2. Customize RSS feeds**\n-> Open the Edit Fields node and replace the list of crypto feeds with any other domain feeds you want.\n\n**3. Set up credentials**\n-> Add your Google Gemini / PaLM API key for the AI summarization node.\n-> Edit system prompt to match your domain, tone, or format.\n\n**4. Send Email**\n-> Add your Gmail OAuth2 credential (used for sending the email).\n\n**5. Run a test**\n-> Click Execute Workflow to test it manually and review the output before activation.",
+        "height": 400,
+        "width": 688
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        288,
+        -560
+      ],
+      "id": "9b229755-0727-45d7-8652-e9703814b38e",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Here is today’s collection of crypto and blockchain news items from multiple RSS feeds:\n\n{{JSON.stringify($json[\"data\"], null, 2)}}\n\nFrom these, select the most relevant and important stories related to ICO, IDO, IEO, INO, token launches, blockchain infrastructure, regulatory developments, and market-impacting events.\n\nPlease return your response in HTML format, with:\n\nA title header (e.g., “📰 Daily Crypto Digest – [today’s date]”)\n\nEach story as a bullet or paragraph\n\nClickable links\n\nA “Key Insights” summary paragraph at the end.",
+        "options": {
+          "systemMessage": "You are an expert crypto journalist and newsletter editor.\nYou specialize in analyzing and summarizing blockchain news and events.\nYour task is to select, prioritize, and summarize the most relevant news about crypto fundraising events (ICO, IDO, IEO, INO) and major blockchain developments.\nIgnore repetitive exchange listings, price speculation, and celebrity news.\n\nOutput a concise, well-formatted newsletter that includes:\n\n5–8 top news stories (if fewer are relevant, include fewer)\n\nEach story with: Headline, Source, Summary (2–3 sentences), and Link\n\nA short “Key Insights” section at the end that summarizes overall trends in blockchain and crypto fundraising.\n\nKeep tone professional, informative, and engaging — suitable for a daily investor-oriented newsletter."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        864,
+        -80
+      ],
+      "id": "4037774d-eb79-4ea8-816c-13fb49678106",
+      "name": "AI Summarizer"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "RSS Read1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "AI Summarizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Summarizer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Markdown": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Summarizer": {
+      "main": [
+        [
+          {
+            "node": "Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0e1edaf4-9024-446d-9b1c-151f83f9e1b2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "04598c1310c534dc626db645ff76a32ed9562c1c08d44c33971812e30be0f9c2"
+  },
+  "id": "DqxDj9Nxp1cDCWUR",
+  "tags": []
+}
